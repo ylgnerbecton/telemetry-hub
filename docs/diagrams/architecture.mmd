@@ -1,0 +1,28 @@
+flowchart TB
+  veh["50 vehicles<br/>~1 Hz telemetry"]:::actor
+  sim["Simulator script"]:::actor
+  op["Operator"]:::actor
+  fe["Dashboard<br/>React + MUI + TanStack Query polling"]:::fe
+
+  subgraph be["FastAPI Backend (async SQLAlchemy)"]
+    direction TB
+    routes["api/routes<br/>telemetry, vehicles, fleet,<br/>anomalies, zones, health"]:::mod
+    services["services<br/>ingestion, fault transition,<br/>anomaly detection, fleet state"]:::mod
+    repos["repositories"]:::mod
+    db[("PostgreSQL<br/>vehicles, telemetry_events, zone_counters,<br/>anomalies, missions, maintenance_records")]:::db
+  end
+
+  veh -->|POST /telemetry| routes
+  sim -->|POST /telemetry| routes
+  op --> fe
+  fe -->|REST polling 1-2s| routes
+  routes --> services
+  services --> repos
+  repos --> db
+
+  db -. "atomic zone counter (ON CONFLICT)<br/>row-locked fault transition<br/>partial unique indexes" .- services
+
+  classDef actor fill:#e8eef9,stroke:#5b7bb4,color:#1a2a44;
+  classDef fe fill:#eafbea,stroke:#5aa55a,color:#1f3d1f;
+  classDef mod fill:#ffffff,stroke:#1f6feb,color:#0b2e63;
+  classDef db fill:#f3e8ff,stroke:#8a5cd1,color:#3d1f63;

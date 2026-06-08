@@ -1,0 +1,17 @@
+sequenceDiagram
+  autonumber
+  participant V as Vehicle / simulator
+  participant API as FastAPI
+  participant DB as PostgreSQL
+
+  V->>API: POST /telemetry
+  API->>DB: BEGIN (single transaction)
+  API->>DB: upsert vehicle
+  API->>DB: insert telemetry_event
+  API->>DB: INSERT zone_counters ON CONFLICT DO UPDATE entry_count + 1
+  API->>DB: detect and insert anomalies (5 deterministic rules)
+  alt status == fault
+    API->>DB: fault transition (lock vehicle, cancel mission, open maintenance)
+  end
+  API->>DB: COMMIT (all of it lands or none)
+  API-->>V: 201 accepted

@@ -1,0 +1,12 @@
+sequenceDiagram
+  autonumber
+  participant API as FastAPI
+  participant DB as PostgreSQL
+
+  Note over API,DB: one service method, shared by POST /telemetry (status fault)<br/>and PATCH /vehicles/{id}/status
+  API->>DB: SELECT vehicle FOR UPDATE (row lock serializes concurrent faults)
+  API->>DB: set vehicle status = fault
+  API->>DB: cancel the active mission
+  API->>DB: open a maintenance record
+  Note over DB: partial unique indexes make a duplicate active mission<br/>or duplicate open maintenance record impossible
+  API->>DB: COMMIT
